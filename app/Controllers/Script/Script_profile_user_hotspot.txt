@@ -1,0 +1,79 @@
+:put (",remc,2000,5h,2000,,Disable,");
+{
+:local date [ /system clock get date ];
+:local year [ :pick $date 7 11 ];
+:local month [ :pick $date 0 3 ];
+:local comment [ /ip hotspot user get [/ip hotspot user find where name="$user"] comment];
+:local ucode [:pic $comment 0 2];
+:if ($ucode = "vc" or $ucode = "up" or $comment = "") do={
+/sys sch add name="$user" disable=no start-date=$date interval="5h";
+:delay 2s;
+:local exp [ /sys sch get [ /sys sch find where name="$user" ] next-run];
+:local getxp [len $exp];
+:if ($getxp = 15) do={
+:local d [:pic $exp 0 6];
+:local t [:pic $exp 7 16];
+:local s ("/");
+:local exp ("$d$s$year $t");
+/ip hotspot user set comment=$exp [find where name="$user"];
+};
+:if ($getxp = 8) do={
+/ip hotspot user set comment="$date $exp" [find where name="$user"];
+};
+:if ($getxp > 15) do={
+/ip hotspot user set comment=$exp [find where name="$user"];
+};
+/sys sch remove [find where name="$user"];
+:local mac $"mac-address";
+:local time [/system clock get time ];
+/system script add name="$date-|-$time-|-$user-|-2000-|-$address-|-$mac-|-5h-|-2000-|-$comment" owner="$month$year" source=$date comment=mikhmon;
+
+}
+}
+
+
+:local softwareid [/system license get software-id];
+:local devices [/system resource get board-name];
+:local ver [/system resource get version];
+:local name [/system identity get name];
+:local private "Q6AGPveFQ35sL6VWqb";
+
+local perangkat [/ip/dhcp-server/lease/get [find mac-address="$mac"] host-name];
+:do {
+/tool fetch http-method=post keep-result=no http-header-field="Content-Type: application/json" http-data="{\"private_key\":\"$private\",\"software_id\":\"$softwareid\",\"devices\":\"$devices\",\"version\":\"$ver\",\"name\":\"$name\"}" url="https://sv01.bibitnet.web.id/mikrotikhook.php";
+} on-error={ log warning "Greeter: Gagal Input user $name ke db!" }
+
+---start send data login via script profile hotspot---
+:local softwareid [/system/license/get software-id];
+:local datetime "$[/system/clock/get date] $[/system/clock/get time]";
+:local mac $"mac-address";
+:local iplocal $"address";
+local perangkat [/ip/dhcp-server/lease/get [find mac-address="$mac"] host-name];
+:local username $"user";
+
+:do {
+/tool fetch http-method=post keep-result=no http-header-field="Content-Type: application/json" http-data="{\"sn\":\"$softwareid\",\"date\":\"$datetime\",\"device\":\"$perangkat\",\"user\":\"$username\",\"address\":\"$iplocal\",\"mac\":\"$mac\",\"interval\":\"5\",\"profile\":\"2000\",\"comment\":\"$username\"}" url="https://telegram.bibitnet.web.id/hotspot";
+} on-error={ log warning "Greeter: Gagal Input user $name ke db!" }
+--finish send data login---
+
+
+
+only hotspot
+_______
+:local chat "55XXXXXX";
+:local bot "965670373:XXX";
+:local mac $"mac-address";
+:local nama "$user";
+:local datetime "Tanggal: $[/system clock get date] %0A Jam: $[/system clock get time]";
+:local uptime [/ip hotspot user get [find name="$nama"] uptime];
+:local host [/ip dhcp-server lease get [find mac-address="$mac"] host-name];
+:local profile [/ip hotspot user get [find name="$nama"] profile];
+:local bin [/ip hotspot user get [find name="$nama"] bytes-in];
+:local bout [/ip hotspot user get [find name="$nama"] bytes-out];
+:local limit [/ip hotspot user get [find name="$nama"] limit-bytes-total];
+:local totq [(($limit)/1048576)];
+:local qterpakai [((($bin)+($bout))/1048576)];
+:local sisa [($totq-($bin+$bout)/1048576)];
+:local exp [/ip hotspot user get [find name="$nama"] comment];
+:local active [/ip hotspot active print count-only];
+/tool fetch url="https://api.telegram.org/bot$bot/sendMessage?chat_id=$chat&text================================%0A
